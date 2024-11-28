@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Hypnotic Spiral</title>
+	<style>
+		body {
+			margin: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			background-color: black;
+			overflow: hidden;
+		}
+		canvas {
+			display: block;
+		}
+		.controls {
+			position: absolute;
+			bottom: 10px;
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			gap: 20px;
+			color: white;
+		}
+		.controls input {
+			width: 100px;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="spiralCanvas"></canvas>
+	<div class="controls">
+		<label>
+			Blink Speed:
+			<input type="range" id="blinkSpeed" min="5" max="30" step="1" value="10">
+		</label>
+		<label>
+			Beep Interval (ms):
+			<input type="range" id="beepInterval" min="100" max="2000" step="100" value="500">
+		</label>
+		<button id="toggleBeep">Start Beep</button>
+	</div>
+	<script>
+		const canvas = document.getElementById('spiralCanvas');
+		const ctx = canvas.getContext('2d');
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+
+		let angle = 0; // For rotation
+		let blinkTimer;
+
+		function drawSpiral() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.save();
+			ctx.translate(canvas.width / 2, canvas.height / 2);
+			ctx.rotate(angle);
+			angle += 0.01; // Speed of rotation
+
+			ctx.beginPath();
+			const maxRadius = Math.min(canvas.width, canvas.height) / 2;
+			for (let t = 0; t < Math.PI * 8; t += 0.1) { // Spiral equation
+				const x = (t / (Math.PI * 8)) * maxRadius * Math.cos(t);
+				const y = (t / (Math.PI * 8)) * maxRadius * Math.sin(t);
+				ctx.lineTo(x, y);
+			}
+			ctx.strokeStyle = "white";
+			ctx.lineWidth = 2;
+			ctx.stroke();
+			ctx.restore();
+
+			requestAnimationFrame(drawSpiral);
+		}
+
+		// Faster Blink effect
+		function startBlinking() {
+			if (blinkTimer) clearInterval(blinkTimer);
+			const speed = 1000 / document.getElementById('blinkSpeed').value;
+			blinkTimer = setInterval(() => {
+				document.body.style.backgroundColor =
+					document.body.style.backgroundColor === 'black' ? 'white' : 'black';
+			}, speed);
+		}
+
+		// Beep sound
+		function playBeep() {
+			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			const oscillator = audioCtx.createOscillator();
+			oscillator.type = 'sine';
+			oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+			oscillator.connect(audioCtx.destination);
+			oscillator.start();
+			oscillator.stop(audioCtx.currentTime + 0.1);
+		}
+
+		function startBeep() {
+			const button = document.getElementById('toggleBeep');
+			if (button.textContent === "Start Beep") {
+				button.textContent = "Stop Beep";
+				beepInterval = setInterval(playBeep, document.getElementById('beepInterval').value);
+			} else {
+				button.textContent = "Start Beep";
+				clearInterval(beepInterval);
+			}
+		}
+
+		document.getElementById('toggleBeep').addEventListener('click', startBeep);
+		document.getElementById('blinkSpeed').addEventListener('input', startBlinking);
+
+		// Initialize spiral and blinking
+		drawSpiral();
+		startBlinking();
+	</script>
+</body>
+</html>
