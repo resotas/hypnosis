@@ -39,12 +39,8 @@
 			<input type="range" id="blinkSpeed" min="5" max="30" step="1" value="10">
 		</label>
 		<label>
-			Noise Min Interval (ms):
-			<input type="range" id="noiseMinInterval" min="100" max="2000" step="100" value="300">
-		</label>
-		<label>
-			Noise Max Interval (ms):
-			<input type="range" id="noiseMaxInterval" min="100" max="3000" step="100" value="1000">
+			Noise Volume:
+			<input type="range" id="noiseVolume" min="0" max="1" step="0.1" value="0.5">
 		</label>
 		<button id="toggleNoise">Start Noise</button>
 	</div>
@@ -56,8 +52,8 @@
 
 		let angle = 0; // For rotation
 		let blinkTimer;
-		let noiseTimer;
-		let noisePlaying = false;
+		let noiseSource;
+		let audioCtx;
 
 		function drawSpiral() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -91,47 +87,53 @@
 			}, speed);
 		}
 
-		// Randomized White Noise Sound
-		function playNoise() {
-			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-			const bufferSize = audioCtx.sampleRate * (Math.random() * 0.5 + 0.1); // Random duration between 0.1 to 0.6 seconds
+		// White Noise Sound
+		function generateNoise() {
+			const bufferSize = audioCtx.sampleRate * 1; // 1 second buffer
 			const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
 			const output = noiseBuffer.getChannelData(0);
 
 			for (let i = 0; i < bufferSize; i++) {
 				output[i] = Math.random() * 2 - 1; // Generate random noise
 			}
-
-			const noiseSource = audioCtx.createBufferSource();
-			noiseSource.buffer = noiseBuffer;
-			noiseSource.connect(audioCtx.destination);
-			noiseSource.start();
+			return noiseBuffer;
 		}
 
 		function startNoise() {
 			const button = document.getElementById('toggleNoise');
-			const minInterval = parseInt(document.getElementById('noiseMinInterval').value, 10);
-			const maxInterval = parseInt(document.getElementById('noiseMaxInterval').value, 10);
-
-			function scheduleNoise() {
-				playNoise();
-				const nextInterval = Math.random() * (maxInterval - minInterval) + minInterval;
-				noiseTimer = setTimeout(scheduleNoise, nextInterval);
+			if (!audioCtx) {
+				audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 			}
+			const gainNode = audioCtx.createGain();
+			gainNode.gain.value = document.getElementById('noiseVolume').value;
 
-			if (!noisePlaying) {
+			if (button.textContent === "Start Noise") {
+				// Ensure AudioContext is resumed
+				audioCtx.resume();
+				// Generate Noise
+				const noiseBuffer = generateNoise();
+				noiseSource = audioCtx.createBufferSource();
+				noiseSource.buffer = noiseBuffer;
+				noiseSource.loop = true; // Loop the noise
+				noiseSource.connect(gainNode).connect(audioCtx.destination);
+				noiseSource.start(0);
+
 				button.textContent = "Stop Noise";
-				noisePlaying = true;
-				scheduleNoise();
 			} else {
+				noiseSource.stop();
 				button.textContent = "Start Noise";
-				noisePlaying = false;
-				clearTimeout(noiseTimer);
 			}
 		}
 
 		document.getElementById('toggleNoise').addEventListener('click', startNoise);
 		document.getElementById('blinkSpeed').addEventListener('input', startBlinking);
+		document.getElementById('noiseVolume').addEventListener('input', (e) => {
+			if (audioCtx) {
+				audioCtx.resume();
+				const gainNode = audioCtx.createGain();
+				gainNode.gain.value = e.target.value;
+			}
+		});
 
 		// Initialize spiral and blinking
 		drawSpiral();
