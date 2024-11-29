@@ -39,8 +39,12 @@
 			<input type="range" id="blinkSpeed" min="5" max="30" step="1" value="10">
 		</label>
 		<label>
-			Noise Interval (ms):
-			<input type="range" id="noiseInterval" min="100" max="2000" step="100" value="500">
+			Noise Min Interval (ms):
+			<input type="range" id="noiseMinInterval" min="100" max="2000" step="100" value="300">
+		</label>
+		<label>
+			Noise Max Interval (ms):
+			<input type="range" id="noiseMaxInterval" min="100" max="3000" step="100" value="1000">
 		</label>
 		<button id="toggleNoise">Start Noise</button>
 	</div>
@@ -53,6 +57,7 @@
 		let angle = 0; // For rotation
 		let blinkTimer;
 		let noiseTimer;
+		let noisePlaying = false;
 
 		function drawSpiral() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -86,10 +91,10 @@
 			}, speed);
 		}
 
-		// White Noise Sound
+		// Randomized White Noise Sound
 		function playNoise() {
 			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-			const bufferSize = audioCtx.sampleRate * 0.1; // 0.1 second buffer
+			const bufferSize = audioCtx.sampleRate * (Math.random() * 0.5 + 0.1); // Random duration between 0.1 to 0.6 seconds
 			const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
 			const output = noiseBuffer.getChannelData(0);
 
@@ -105,12 +110,23 @@
 
 		function startNoise() {
 			const button = document.getElementById('toggleNoise');
-			if (button.textContent === "Start Noise") {
+			const minInterval = parseInt(document.getElementById('noiseMinInterval').value, 10);
+			const maxInterval = parseInt(document.getElementById('noiseMaxInterval').value, 10);
+
+			function scheduleNoise() {
+				playNoise();
+				const nextInterval = Math.random() * (maxInterval - minInterval) + minInterval;
+				noiseTimer = setTimeout(scheduleNoise, nextInterval);
+			}
+
+			if (!noisePlaying) {
 				button.textContent = "Stop Noise";
-				noiseTimer = setInterval(playNoise, document.getElementById('noiseInterval').value);
+				noisePlaying = true;
+				scheduleNoise();
 			} else {
 				button.textContent = "Start Noise";
-				clearInterval(noiseTimer);
+				noisePlaying = false;
+				clearTimeout(noiseTimer);
 			}
 		}
 
