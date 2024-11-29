@@ -39,10 +39,10 @@
 			<input type="range" id="blinkSpeed" min="5" max="30" step="1" value="10">
 		</label>
 		<label>
-			Beep Interval (ms):
-			<input type="range" id="beepInterval" min="100" max="2000" step="100" value="500">
+			Noise Interval (ms):
+			<input type="range" id="noiseInterval" min="100" max="2000" step="100" value="500">
 		</label>
-		<button id="toggleBeep">Start Beep</button>
+		<button id="toggleNoise">Start Noise</button>
 	</div>
 	<script>
 		const canvas = document.getElementById('spiralCanvas');
@@ -51,7 +51,7 @@
 		canvas.height = window.innerHeight;
 
 		let angle = 0; // For rotation
-		let blinkTimer;
+		let noiseTimer;
 
 		function drawSpiral() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -75,7 +75,7 @@
 			requestAnimationFrame(drawSpiral);
 		}
 
-		// Faster Blink effect
+		// Blink effect
 		function startBlinking() {
 			if (blinkTimer) clearInterval(blinkTimer);
 			const speed = 1000 / document.getElementById('blinkSpeed').value;
@@ -85,29 +85,35 @@
 			}, speed);
 		}
 
-		// Beep sound
-		function playBeep() {
+		// White Noise Sound
+		function playNoise() {
 			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-			const oscillator = audioCtx.createOscillator();
-			oscillator.type = 'sine';
-			oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-			oscillator.connect(audioCtx.destination);
-			oscillator.start();
-			oscillator.stop(audioCtx.currentTime + 0.1);
+			const bufferSize = audioCtx.sampleRate * 0.1; // 0.1 second buffer
+			const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+			const output = noiseBuffer.getChannelData(0);
+
+			for (let i = 0; i < bufferSize; i++) {
+				output[i] = Math.random() * 2 - 1; // Generate random noise
+			}
+
+			const noiseSource = audioCtx.createBufferSource();
+			noiseSource.buffer = noiseBuffer;
+			noiseSource.connect(audioCtx.destination);
+			noiseSource.start();
 		}
 
-		function startBeep() {
-			const button = document.getElementById('toggleBeep');
-			if (button.textContent === "Start Beep") {
-				button.textContent = "Stop Beep";
-				beepInterval = setInterval(playBeep, document.getElementById('beepInterval').value);
+		function startNoise() {
+			const button = document.getElementById('toggleNoise');
+			if (button.textContent === "Start Noise") {
+				button.textContent = "Stop Noise";
+				noiseTimer = setInterval(playNoise, document.getElementById('noiseInterval').value);
 			} else {
-				button.textContent = "Start Beep";
-				clearInterval(beepInterval);
+				button.textContent = "Start Noise";
+				clearInterval(noiseTimer);
 			}
 		}
 
-		document.getElementById('toggleBeep').addEventListener('click', startBeep);
+		document.getElementById('toggleNoise').addEventListener('click', startNoise);
 		document.getElementById('blinkSpeed').addEventListener('input', startBlinking);
 
 		// Initialize spiral and blinking
